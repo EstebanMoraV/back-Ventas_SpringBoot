@@ -1,20 +1,19 @@
-# ETAPA 1: Instalación de dependencias
-FROM node:18-alpine AS builder
+# ETAPA 1: Construcción (Maven)
+FROM maven:3.8.5-openjdk-17 AS build
 WORKDIR /app
-COPY package*.json ./
-RUN npm install
 COPY . .
+RUN mvn clean package -DskipTests
 
-# ETAPA 2: Ejecución segura
-FROM node:18-alpine
+# ETAPA 2: Ejecución (Runtime ligero)
+FROM openjdk:17-jdk-slim
 WORKDIR /app
 
-# SEGURIDAD: Creamos un usuario para no correr como root (Requisito IE1)
-RUN addgroup -S devopsgroup && adduser -S devopsuser -G devopsgroup
+# SEGURIDAD: Usuario no root (IE1)
+RUN groupadd -r devopsgroup && useradd -r -g devopsgroup devopsuser
 USER devopsuser
 
-# Copiamos solo lo necesario de la etapa anterior
-COPY --from=builder /app .
+# Copiamos el .jar generado en la etapa anterior
+COPY --from=build /app/target/*.jar app.jar
 
-EXPOSE 3001
-CMD ["npm", "start"]
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "app.jar"]
