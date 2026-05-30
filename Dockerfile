@@ -4,15 +4,14 @@ WORKDIR /app
 COPY . .
 RUN mvn clean package -DskipTests
 
-# ETAPA 2: Ejecución (Runtime ligero)
-FROM openjdk:17-jdk-slim
+# ETAPA 2: Ejecución (Cambiamos openjdk por amazoncorretto)
+FROM amazoncorretto:17-al2-generic
 WORKDIR /app
 
-# SEGURIDAD: Usuario no root (IE1)
-RUN groupadd -r devopsgroup && useradd -r -g devopsgroup devopsuser
+# SEGURIDAD: Usuario no root
+RUN yum install -y shadow-utils && groupadd -r devopsgroup && useradd -r -g devopsgroup devopsuser
 USER devopsuser
 
-# Copiamos el .jar generado en la etapa anterior
 COPY --from=build /app/target/*.jar app.jar
 
 EXPOSE 8080
